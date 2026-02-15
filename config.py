@@ -15,5 +15,5 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
     MAX_FREE_GENERATIONS = 1
-    CLAUDE_MODEL = "claude-sonnet-4-5-20250929"
-    CLAUDE_MAX_TOKENS = 8000
+    CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+    CLAUDE_MAX_TOKENS = 4000
