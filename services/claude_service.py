@@ -1,13 +1,14 @@
 import logging
-import anthropic
+import requests
 from config import Config
 
 logger = logging.getLogger(__name__)
 
+API_URL = "https://api.anthropic.com/v1/messages"
+
 SYSTEM_PROMPT = """Tu es un expert en business en ligne, marketing digital et entrepreneuriat.
 Tu dois generer un plan business complet, actionnable et realiste.
-Reponds TOUJOURS en francais. Structure ta reponse EXACTEMENT avec ces sections, en utilisant
-ces titres Markdown:
+Reponds TOUJOURS en francais. Structure ta reponse avec ces sections Markdown:
 
 ## 1. Idee Business Personnalisee
 ## 2. Plan d'Action 30 Jours
@@ -18,43 +19,46 @@ ces titres Markdown:
 ## 7. Outils Necessaires
 ## 8. Conseils Mindset
 
-Sois precis, concret et donne des chiffres realistes. Pas de blabla generique.
-Chaque section doit contenir du contenu detaille et actionnable."""
+Sois precis, concret et donne des chiffres realistes."""
 
 
 def build_user_prompt(profile: dict) -> str:
-    return f"""Genere un plan business complet et personnalise pour ce profil:
-
+    return f"""Genere un plan business personnalise pour ce profil:
 - Age: {profile['age']} ans
-- Budget de depart: {profile['budget']} EUR
+- Budget: {profile['budget']} EUR
 - Competences: {profile['skills']}
-- Temps disponible par semaine: {profile['available_time']}h
+- Temps/semaine: {profile['available_time']}h
 - Pays: {profile['country']}
-- Objectif financier mensuel: {profile['financial_goal']} EUR/mois
-- Centres d'interet: {profile.get('interests', 'Non precise')}
-- Niveau d'experience: {profile.get('experience_level', 'Debutant')}
+- Objectif: {profile['financial_goal']} EUR/mois
+- Interets: {profile.get('interests', 'Non precise')}
+- Niveau: {profile.get('experience_level', 'Debutant')}
 
-Genere les 8 sections demandees avec du contenu concret et personnalise.
-Pour les scripts TikTok, donne le texte exact a dire avec les timecodes.
-Pour le plan 30 jours, donne les actions jour par jour.
-Pour l'estimation des revenus, donne mois 1, mois 3, mois 6 et mois 12."""
+Donne du contenu concret et actionnable pour chaque section."""
 
 
 def generate_business_plan(profile: dict) -> str | None:
     if not Config.ANTHROPIC_API_KEY:
-        logger.error("ANTHROPIC_API_KEY is not set")
+        logger.error("ANTHROPIC_API_KEY not set")
         return None
 
-    client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+    headers = {
+        "x-api-key": Config.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+
+    payload = {
+        "model": Config.CLAUDE_MODEL,
+        "max_tokens": Config.CLAUDE_MAX_TOKENS,
+        "system": SYSTEM_PROMPT,
+        "messages": [{"role": "user", "content": build_user_prompt(profile)}],
+    }
 
     try:
-        message = client.messages.create(
-            model=Config.CLAUDE_MODEL,
-            max_tokens=Config.CLAUDE_MAX_TOKENS,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": build_user_prompt(profile)}],
-        )
-        return message.content[0].text
+        resp = requests.post(API_URL, json=payload, headers=headers, timeout=120)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["content"][0]["text"]
     except Exception as e:
-        logger.error(f"Claude API error: {type(e).__name__}: {e}")
+        logger.error(f"Claude API error: {e}")
         raise
