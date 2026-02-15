@@ -71,23 +71,23 @@ def generate():
 <span class="tag">""" + str(profile['country']) + """</span>
 <span class="tag">Objectif: """ + str(profile['financial_goal']) + """ EUR/mois</span>
 </div></div>
-<article class="result-content"><div id="raw" style="display:none">"""
+<article class="result-content" id="content">"""
 
         # Stream Claude response chunks
         for chunk in generate_business_plan_stream(profile):
             safe = chunk.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
             yield safe
 
-        # Send the closing HTML with markdown rendering
-        yield """</div><div id="rendered"></div></article>
+        yield """</article>
 <div class="result-actions no-print" style="margin-top:32px;display:flex;justify-content:center;gap:12px">
 <button onclick="window.print()" class="btn btn-primary">Telecharger en PDF</button>
 <a href="/" class="btn btn-outline">Generer un autre plan</a></div>
 </main>
 <footer class="footer"><p>AI Business Generator &mdash; Propulse par Claude AI</p></footer>
 <script>
-var raw = document.getElementById('raw').textContent;
-document.getElementById('rendered').innerHTML = marked.parse(raw);
+var el = document.getElementById('content');
+var raw = el.textContent;
+el.innerHTML = marked.parse(raw);
 </script></body></html>"""
 
     return Response(stream_with_context(stream_page()), content_type="text/html")
