@@ -47,8 +47,6 @@ def generate():
         return render_template("index.html", error="Erreur lors de la generation. Verifiez votre cle API.")
 
     increment_usage(session)
-    session["last_result"] = result
-    session["last_profile"] = profile
 
     return render_template("result.html", result=result, profile=profile)
 
