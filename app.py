@@ -1,9 +1,13 @@
 import sys
 import os
+import logging
 from flask import Flask, render_template, request, session, redirect, url_for
 from config import Config
 from services.claude_service import generate_business_plan
 from utils.rate_limiter import can_generate, increment_usage
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Fix paths for PyInstaller
 if getattr(sys, 'frozen', False):
@@ -42,9 +46,13 @@ def generate():
     if missing:
         return render_template("index.html", error="Veuillez remplir tous les champs obligatoires.")
 
-    result = generate_business_plan(profile)
-    if result is None:
-        return render_template("index.html", error="Erreur lors de la generation. Verifiez votre cle API.")
+    try:
+        result = generate_business_plan(profile)
+        if result is None:
+            return render_template("index.html", error="Cle API non configuree. Contactez l'administrateur.")
+    except Exception as e:
+        logger.error(f"Generation failed: {e}")
+        return render_template("index.html", error=f"Erreur: {type(e).__name__} - {e}")
 
     increment_usage(session)
 
@@ -60,6 +68,16 @@ def paywall():
 def reset():
     session.clear()
     return redirect(url_for("index"))
+
+
+@app.route("/health")
+def health():
+    api_key = Config.ANTHROPIC_API_KEY
+    return {
+        "status": "ok",
+        "api_key_set": bool(api_key),
+        "api_key_prefix": api_key[:20] + "..." if api_key else "NOT SET",
+    }
 
 
 if __name__ == "__main__":

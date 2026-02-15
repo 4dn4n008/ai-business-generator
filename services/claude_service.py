@@ -1,5 +1,8 @@
+import logging
 import anthropic
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """Tu es un expert en business en ligne, marketing digital et entrepreneuriat.
 Tu dois generer un plan business complet, actionnable et realiste.
@@ -39,6 +42,7 @@ Pour l'estimation des revenus, donne mois 1, mois 3, mois 6 et mois 12."""
 
 def generate_business_plan(profile: dict) -> str | None:
     if not Config.ANTHROPIC_API_KEY:
+        logger.error("ANTHROPIC_API_KEY is not set")
         return None
 
     client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
@@ -51,5 +55,6 @@ def generate_business_plan(profile: dict) -> str | None:
             messages=[{"role": "user", "content": build_user_prompt(profile)}],
         )
         return message.content[0].text
-    except anthropic.APIError:
-        return None
+    except Exception as e:
+        logger.error(f"Claude API error: {type(e).__name__}: {e}")
+        raise
