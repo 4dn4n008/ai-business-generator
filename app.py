@@ -1,6 +1,7 @@
 import sys
 import os
 import logging
+import traceback
 from flask import Flask, render_template, request, session, redirect, url_for
 from config import Config
 from services.claude_service import generate_business_plan
@@ -19,6 +20,13 @@ else:
     app = Flask(__name__)
 
 app.config.from_object(Config)
+
+
+@app.errorhandler(500)
+def internal_error(e):
+    error_details = traceback.format_exc()
+    logger.error(f"500 error: {error_details}")
+    return f"<h1>Erreur Serveur</h1><pre>{error_details}</pre>", 500
 
 
 @app.route("/")
@@ -50,13 +58,12 @@ def generate():
         result = generate_business_plan(profile)
         if result is None:
             return render_template("index.html", error="Cle API non configuree. Contactez l'administrateur.")
+        increment_usage(session)
+        return render_template("result.html", result=result, profile=profile)
     except Exception as e:
-        logger.error(f"Generation failed: {e}")
-        return render_template("index.html", error=f"Erreur: {type(e).__name__} - {e}")
-
-    increment_usage(session)
-
-    return render_template("result.html", result=result, profile=profile)
+        error_details = traceback.format_exc()
+        logger.error(f"Generation failed: {error_details}")
+        return f"<h1>Erreur</h1><pre>{error_details}</pre>", 500
 
 
 @app.route("/paywall")
