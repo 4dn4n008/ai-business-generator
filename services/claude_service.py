@@ -1,3 +1,4 @@
+import json
 import logging
 import requests
 from config import Config
@@ -7,8 +8,7 @@ logger = logging.getLogger(__name__)
 API_URL = "https://api.anthropic.com/v1/messages"
 
 SYSTEM_PROMPT = """Tu es un expert en business en ligne, marketing digital et entrepreneuriat.
-Tu dois generer un plan business complet, actionnable et realiste.
-Reponds TOUJOURS en francais. Structure ta reponse avec ces sections Markdown:
+Reponds en francais. Structure ta reponse avec ces sections Markdown:
 
 ## 1. Idee Business Personnalisee
 ## 2. Plan d'Action 30 Jours
@@ -19,27 +19,19 @@ Reponds TOUJOURS en francais. Structure ta reponse avec ces sections Markdown:
 ## 7. Outils Necessaires
 ## 8. Conseils Mindset
 
-Sois precis, concret et donne des chiffres realistes."""
+Sois precis et concret."""
 
 
 def build_user_prompt(profile: dict) -> str:
-    return f"""Genere un plan business personnalise pour ce profil:
-- Age: {profile['age']} ans
-- Budget: {profile['budget']} EUR
-- Competences: {profile['skills']}
-- Temps/semaine: {profile['available_time']}h
-- Pays: {profile['country']}
-- Objectif: {profile['financial_goal']} EUR/mois
-- Interets: {profile.get('interests', 'Non precise')}
-- Niveau: {profile.get('experience_level', 'Debutant')}
-
-Donne du contenu concret et actionnable pour chaque section."""
+    return f"""Plan business pour: {profile['age']} ans, {profile['budget']} EUR budget, competences: {profile['skills']}, {profile['available_time']}h/sem, {profile['country']}, objectif {profile['financial_goal']} EUR/mois, interets: {profile.get('interests', 'aucun')}, niveau: {profile.get('experience_level', 'debutant')}. Genere les 8 sections."""
 
 
-def generate_business_plan(profile: dict) -> str | None:
+def generate_business_plan_stream(profile: dict):
+    """Generator that yields text chunks as they arrive from Claude."""
     if not Config.ANTHROPIC_API_KEY:
         logger.error("ANTHROPIC_API_KEY not set")
-        return None
+        yield "Erreur: Cle API non configuree."
+        return
 
     headers = {
         "x-api-key": Config.ANTHROPIC_API_KEY,
@@ -50,15 +42,33 @@ def generate_business_plan(profile: dict) -> str | None:
     payload = {
         "model": Config.CLAUDE_MODEL,
         "max_tokens": Config.CLAUDE_MAX_TOKENS,
+        "stream": True,
         "system": SYSTEM_PROMPT,
         "messages": [{"role": "user", "content": build_user_prompt(profile)}],
     }
 
     try:
-        resp = requests.post(API_URL, json=payload, headers=headers, timeout=120)
+        resp = requests.post(API_URL, json=payload, headers=headers, timeout=120, stream=True)
         resp.raise_for_status()
-        data = resp.json()
-        return data["content"][0]["text"]
+
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            decoded = line.decode("utf-8")
+            if not decoded.startswith("data: "):
+                continue
+            data_str = decoded[6:]
+            if data_str.strip() == "[DONE]":
+                break
+            try:
+                event = json.loads(data_str)
+                if event.get("type") == "content_block_delta":
+                    text = event.get("delta", {}).get("text", "")
+                    if text:
+                        yield text
+            except json.JSONDecodeError:
+                continue
+
     except Exception as e:
         logger.error(f"Claude API error: {e}")
-        raise
+        yield f"\n\nErreur: {e}"
