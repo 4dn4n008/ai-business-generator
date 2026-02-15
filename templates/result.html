@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="result-header">
+    <h1>Ton Plan Business est Pret</h1>
+    <p>Voici ton plan personnalise genere par l'IA.</p>
+    <div class="result-actions">
+        <button onclick="window.print()" class="btn btn-primary">Telecharger en PDF</button>
+        <a href="/" class="btn btn-outline">Nouvelle generation</a>
+    </div>
+</section>
+
+<div class="profile-summary">
+    <h3>Ton Profil</h3>
+    <div class="profile-tags">
+        <span class="tag">{{ profile.age }} ans</span>
+        <span class="tag">{{ profile.budget }} EUR</span>
+        <span class="tag">{{ profile.available_time }}h/sem</span>
+        <span class="tag">{{ profile.country }}</span>
+        <span class="tag">Objectif: {{ profile.financial_goal }} EUR/mois</span>
+    </div>
+</div>
+
+<article class="result-content" id="result-content">
+    {{ result | safe }}
+</article>
+
+<div class="result-actions bottom-actions no-print">
+    <button onclick="window.print()" class="btn btn-primary">Telecharger en PDF</button>
+    <a href="/" class="btn btn-outline">Generer un autre plan</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const content = document.getElementById('result-content');
+        let text = content.innerText;
+
+        text = text.replace(/^## (\d+\..+)$/gm, '<h2>$1</h2>');
+        text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/^- (.+)$/gm, '<li>$1</li>');
+        text = text.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+        text = text.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+        text = text.replace(/\n\n/g, '</p><p>');
+        text = '<p>' + text + '</p>';
+        text = text.replace(/<p>\s*<h/g, '<h');
+        text = text.replace(/<\/h(\d)>\s*<\/p>/g, '</h$1>');
+        text = text.replace(/<p>\s*<ul>/g, '<ul>');
+        text = text.replace(/<\/ul>\s*<\/p>/g, '</ul>');
+        text = text.replace(/<p>\s*<\/p>/g, '');
+
+        content.innerHTML = text;
+    });
+</script>
+{% endblock %}

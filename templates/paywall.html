@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="paywall-section">
+    <div class="paywall-card">
+        <div class="paywall-icon">&#128274;</div>
+        <h1>Generation gratuite utilisee</h1>
+        <p>Tu as deja utilise ta generation gratuite. Passe en Premium pour des generations illimitees.</p>
+
+        <div class="pricing-cards">
+            <div class="price-card">
+                <h3>Starter</h3>
+                <div class="price">9.99 EUR<span>/mois</span></div>
+                <ul>
+                    <li>10 generations / mois</li>
+                    <li>Export PDF</li>
+                    <li>Support email</li>
+                </ul>
+                <button class="btn btn-outline" onclick="alert('Paiement bientot disponible !')">
+                    Choisir Starter
+                </button>
+            </div>
+            <div class="price-card featured">
+                <div class="badge">Populaire</div>
+                <h3>Pro</h3>
+                <div class="price">24.99 EUR<span>/mois</span></div>
+                <ul>
+                    <li>Generations illimitees</li>
+                    <li>Export PDF</li>
+                    <li>Support prioritaire</li>
+                    <li>Templates premium</li>
+                </ul>
+                <button class="btn btn-primary" onclick="alert('Paiement bientot disponible !')">
+                    Choisir Pro
+                </button>
+            </div>
+        </div>
+
+        <a href="/reset" class="reset-link">Reinitialiser (demo uniquement)</a>
+    </div>
+</section>
+{% endblock %}
